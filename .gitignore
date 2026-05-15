@@ -19,9 +19,10 @@ build/
 .DS_Store
 Thumbs.db
 
-# IDE
+# IDE / editor tooling
 .vscode/settings.json
 .idea/
+.claude/
 
 # Docker volumes / local data
 postgres_data/
