@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Surfaces */
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    /* Primary — #378ADD blue */
+    --primary: 210 67% 54%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary / muted surfaces */
+    --secondary: 214 32% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 214 32% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    /* Accent — same as secondary for now */
+    --accent: 214 32% 93%;
+    --accent-foreground: 222 47% 11%;
+
+    /* Destructive */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    /* Borders + inputs */
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 210 67% 54%;
+
+    --radius: 0.5rem;
+
+    /* Sidebar */
+    --sidebar: 214 32% 97%;
+    --sidebar-border: 214 32% 89%;
+  }
+
+  .dark {
+    /* Surfaces */
+    --background: 235 25% 9%;
+    --foreground: 214 30% 91%;
+    --card: 235 22% 13%;
+    --card-foreground: 214 30% 91%;
+
+    /* Primary — same blue, slightly brighter */
+    --primary: 210 67% 58%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary / muted */
+    --secondary: 235 20% 17%;
+    --secondary-foreground: 214 30% 91%;
+    --muted: 235 20% 17%;
+    --muted-foreground: 215 14% 55%;
+
+    /* Accent */
+    --accent: 235 20% 20%;
+    --accent-foreground: 214 30% 91%;
+
+    /* Destructive */
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+
+    /* Borders */
+    --border: 235 18% 22%;
+    --input: 235 18% 22%;
+    --ring: 210 67% 58%;
+
+    /* Sidebar */
+    --sidebar: 235 22% 11%;
+    --sidebar-border: 235 18% 20%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  /* Tell the browser which color scheme is active so native widgets
+     (date pickers, scrollbars, select popups) match the theme */
+  :root { color-scheme: light; }
+  .dark  { color-scheme: dark; }
+
+  /* Native <select> popup background — without this, the OS renders
+     the dropdown in system colors (white on dark background) */
+  select {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+  option {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+}
+
+@keyframes progress {
+  0%   { transform: translateX(-100%); width: 40%; }
+  50%  { width: 60%; }
+  100% { transform: translateX(280%); width: 40%; }
+}
