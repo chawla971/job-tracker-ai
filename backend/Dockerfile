@@ -13,3 +13,5 @@ RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTr
 COPY . .
 
 RUN chmod +x entrypoint.sh
+
+CMD ["./entrypoint.sh"]

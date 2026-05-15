@@ -104,6 +104,55 @@ Sign out and back in to see the Admin link in the sidebar.
 
 ---
 
+## Deploying to Railway
+
+Railway runs each service separately. From one GitHub repo you create three services.
+
+### 1. PostgreSQL with pgvector
+
+Railway's built-in Postgres plugin **does not include pgvector**. Add a custom service instead:
+
+- New service → **Deploy a Docker image** → `pgvector/pgvector:pg16`
+- Set environment variables: `POSTGRES_USER=jobtracker`, `POSTGRES_PASSWORD=<secret>`, `POSTGRES_DB=jobtracker`
+- Railway will give you a `DATABASE_URL` — copy it for the backend service
+
+### 2. Backend service
+
+- New service → **GitHub repo** → select this repo
+- Set **Root Directory** to `backend/`
+- Railway auto-detects the Dockerfile and runs `./entrypoint.sh`
+- Set environment variables:
+  - `DATABASE_URL` (from the Postgres service above)
+  - `LLM_PROVIDER=openai`
+  - `OPENAI_API_KEY`
+  - `GOOGLE_CLIENT_ID`
+  - `JWT_SECRET_KEY`
+  - `RAILWAY_ENVIRONMENT=production`
+  - `FRONTEND_URL` (set after deploying frontend — come back and add this)
+
+### 3. Frontend service
+
+- New service → **GitHub repo** → select this repo
+- Set **Root Directory** to `frontend/`
+- Set **Dockerfile Path** to `frontend/Dockerfile.prod`
+- Set **build-time** environment variable: `VITE_API_URL=https://your-backend.up.railway.app`
+- After deploy, copy the frontend domain and set it as `FRONTEND_URL` on the backend service
+
+### 4. Google OAuth
+
+Add your Railway frontend domain to Google Cloud Console:
+- **APIs & Services → Credentials → your OAuth client**
+- Add to **Authorised JavaScript origins**: `https://your-frontend.up.railway.app`
+
+### 5. Set yourself as admin
+
+After first login via the Railway app:
+```bash
+railway run --service postgres psql -c "UPDATE users SET is_admin = true WHERE email = 'your@email.com';"
+```
+
+---
+
 ## Project Structure
 
 ```

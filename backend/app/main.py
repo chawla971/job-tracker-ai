@@ -24,9 +24,13 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Job Tracker API", version="0.4.0", lifespan=lifespan)
 
+_allowed_origins = ["http://localhost:5173"]
+if _frontend_url := __import__("os").getenv("FRONTEND_URL"):
+    _allowed_origins.append(_frontend_url.rstrip("/"))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
