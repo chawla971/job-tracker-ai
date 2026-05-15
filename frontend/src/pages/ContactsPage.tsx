@@ -49,8 +49,8 @@ export function ContactsPage() {
     );
   }, [loadContacts]);
 
-  async function handleCreate(data: Parameters<typeof contactService.create>[0]) {
-    const created = await contactService.create(data);
+  async function handleCreate(data: import("@/types/contact").ContactCreate | import("@/types/contact").ContactUpdate) {
+    const created = await contactService.create(data as import("@/types/contact").ContactCreate);
     setContacts((prev) => [created, ...prev]);
     setShowForm(false);
   }

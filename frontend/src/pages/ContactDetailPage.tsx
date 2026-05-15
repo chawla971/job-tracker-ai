@@ -42,8 +42,8 @@ export function ContactDetailPage() {
     setEditing(false);
   }
 
-  async function handleAddChat(data: Parameters<typeof coffeeChatService.create>[0]) {
-    const created = await coffeeChatService.create(data);
+  async function handleAddChat(data: import("@/types/contact").CoffeeChatCreate | import("@/types/contact").CoffeeChatUpdate) {
+    const created = await coffeeChatService.create(data as import("@/types/contact").CoffeeChatCreate);
     setContact((prev) => prev ? { ...prev, coffee_chats: [created, ...prev.coffee_chats] } : null);
     setShowChatForm(false);
   }

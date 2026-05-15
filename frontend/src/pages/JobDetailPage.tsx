@@ -80,8 +80,8 @@ export function JobDetailPage() {
     setEditingJob(false);
   }
 
-  async function handleAddContact(data: ContactCreate) {
-    await contactService.create({ ...data, job_id: id });
+  async function handleAddContact(data: ContactCreate | import("@/types/contact").ContactUpdate) {
+    await contactService.create({ ...data, job_id: id } as ContactCreate);
     await reload();
     setShowContactForm(false);
   }
