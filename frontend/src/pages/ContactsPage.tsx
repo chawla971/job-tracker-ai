@@ -55,11 +55,6 @@ export function ContactsPage() {
     setShowForm(false);
   }
 
-  async function handleDelete(id: string) {
-    await contactService.delete(id);
-    setContacts((prev) => prev.filter((c) => c.id !== id));
-  }
-
   const jobMap = Object.fromEntries(jobs.map((j) => [j.id, j]));
 
   return (

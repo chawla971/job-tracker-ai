@@ -86,8 +86,8 @@ export function JobDetailPage() {
     setShowContactForm(false);
   }
 
-  async function handleAddInterview(data: Parameters<typeof interviewService.create>[0]) {
-    await interviewService.create(data);
+  async function handleAddInterview(data: import("@/types/interview").InterviewCreate | import("@/types/interview").InterviewUpdate) {
+    await interviewService.create(data as import("@/types/interview").InterviewCreate);
     await reload();
     setShowInterviewForm(false);
   }
