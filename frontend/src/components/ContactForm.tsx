@@ -27,6 +27,7 @@ export function ContactForm({ initial, jobs = [], defaultJobId, onSubmit, onCanc
     name: initial?.name ?? "",
     company: initial?.company ?? "",
     linkedin_url: initial?.linkedin_url ?? "",
+    meeting_link: initial?.meeting_link ?? "",
     job_id: initial?.job_id ?? defaultJobId ?? "",
     outreach_date: initial?.outreach_date ?? today,
     status: (initial?.status ?? "awaiting_response") as ContactStatus,
@@ -58,8 +59,8 @@ export function ContactForm({ initial, jobs = [], defaultJobId, onSubmit, onCanc
         ...fields,
         company: fields.company || undefined,
         linkedin_url: fields.linkedin_url || undefined,
+        meeting_link: fields.meeting_link || undefined,
         job_id: fields.job_id || undefined,
-        // Don't send follow_up_date for chat_done contacts
         follow_up_date: isChatDone ? undefined : (fields.follow_up_date || undefined),
       });
     } catch (err) {
@@ -124,6 +125,21 @@ export function ContactForm({ initial, jobs = [], defaultJobId, onSubmit, onCanc
             ))}
           </select>
         </div>
+
+        {/* Meeting link — only relevant when a chat is scheduled */}
+        {fields.status === "chat_scheduled" && (
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label htmlFor="meeting_link">Meeting Link</Label>
+            <Input
+              id="meeting_link"
+              name="meeting_link"
+              type="url"
+              value={fields.meeting_link}
+              onChange={handleChange}
+              placeholder="https://meet.google.com/..."
+            />
+          </div>
+        )}
 
         {/* Only show follow-up date when it's relevant */}
         {!isChatDone && (

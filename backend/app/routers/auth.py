@@ -73,10 +73,16 @@ def google_login(data: GoogleTokenRequest, db: Session = Depends(get_db)) -> Aut
     name = idinfo.get("name", email)
     picture = idinfo.get("picture")
 
+    ADMIN_EMAILS = {"sahil971chawla@gmail.com"}
+
     is_new_user = False
     user = db.query(User).filter(User.google_id == google_id).first()
     if not user:
-        user = User(email=email, name=name, google_id=google_id, profile_picture_url=picture)
+        user = User(
+            email=email, name=name, google_id=google_id,
+            profile_picture_url=picture,
+            is_admin=email in ADMIN_EMAILS,
+        )
         db.add(user)
         db.commit()
         db.refresh(user)

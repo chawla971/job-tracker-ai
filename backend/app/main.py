@@ -3,22 +3,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers import jobs, contacts, coffee_chats, interviews, dashboard, profile, search, chat
-from app.routers import scrape_jd, auth, import_jobs, admin
+from app.routers import scrape_jd, auth, import_jobs, admin, feedback, calendar_events
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Pre-load the embedding model into memory before the first request.
-    # Without this, the first save after startup blocks for 10-30s while
-    # PyTorch and the model weights are loaded, making the server appear frozen.
-    import asyncio
-    import concurrent.futures
-    from app.rag.embedder import get_model
-    print("Loading embedding model into memory...")
-    loop = asyncio.get_event_loop()
-    with concurrent.futures.ThreadPoolExecutor() as pool:
-        await loop.run_in_executor(pool, get_model)
-    print("Embedding model ready.")
+    # No local model to preload — embeddings now use OpenAI API (text-embedding-3-small)
+    print("Job Tracker API starting up.")
     yield
 
 
@@ -48,6 +39,8 @@ app.include_router(scrape_jd.router, prefix="/api/scrape-jd", tags=["scrape-jd"]
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(import_jobs.router, prefix="/api/jobs/import", tags=["import"])
 app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
+app.include_router(feedback.router, prefix="/api/feedback", tags=["feedback"])
+app.include_router(calendar_events.router, prefix="/api/calendar", tags=["calendar"])
 
 
 @app.get("/health")

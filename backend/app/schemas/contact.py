@@ -14,6 +14,7 @@ class ContactCreate(BaseModel):
     job_id: Optional[UUID] = None
     linkedin_url: Optional[str] = None
     company: Optional[str] = None
+    meeting_link: Optional[str] = None
     outreach_date: date
     status: ContactStatus = ContactStatus.awaiting_response
     follow_up_date: Optional[date] = None
@@ -24,6 +25,7 @@ class ContactUpdate(BaseModel):
     job_id: Optional[UUID] = None
     linkedin_url: Optional[str] = None
     company: Optional[str] = None
+    meeting_link: Optional[str] = None
     outreach_date: Optional[date] = None
     status: Optional[ContactStatus] = None
     follow_up_date: Optional[date] = None
@@ -35,6 +37,7 @@ class ContactResponse(BaseModel):
     name: str
     linkedin_url: Optional[str]
     company: Optional[str]
+    meeting_link: Optional[str]
     outreach_date: date
     status: ContactStatus
     follow_up_date: Optional[date]

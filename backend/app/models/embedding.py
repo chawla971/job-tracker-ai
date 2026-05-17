@@ -27,6 +27,6 @@ class Embedding(Base):
     source_id = Column(UUID(as_uuid=True), nullable=False)
     chunk_index = Column(Integer, nullable=False, default=0)
     chunk_text = Column(Text, nullable=False)
-    # 384 dimensions — matches all-MiniLM-L6-v2 output
-    embedding = Column(Vector(384), nullable=True)
+    # 1536 dimensions — matches OpenAI text-embedding-3-small
+    embedding = Column(Vector(1536), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, X, ExternalLink, Pencil, Trash2, Video } from "lucide-react";
+import { ArrowLeft, Plus, X, ExternalLink, Pencil, Trash2, Video, CalendarPlus } from "lucide-react";
+import { googleCalendarUrl } from "@/lib/calendar";
 import { Button } from "@/components/ui/button";
 import { ContactForm } from "@/components/ContactForm";
 import { CoffeeChatForm } from "@/components/CoffeeChatForm";
@@ -109,6 +110,12 @@ export function ContactDetailPage() {
                 )}
               </div>
               {contact.company && <p className="text-muted-foreground text-sm mt-0.5">{contact.company}</p>}
+              {contact.meeting_link && contact.status === "chat_scheduled" && (
+                <a href={contact.meeting_link} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1">
+                  <Video size={12} /> Join meeting
+                </a>
+              )}
             </div>
             <div className="flex gap-1">
               <Button variant="ghost" size="icon" onClick={() => setEditing(true)} title="Edit">
@@ -195,6 +202,7 @@ export function ContactDetailPage() {
             <ChatCard
               key={chat.id}
               chat={chat}
+              contact={contact}
               onEdit={() => setEditingChatId(chat.id)}
               onDelete={() => handleDeleteChat(chat.id)}
             />
@@ -207,28 +215,40 @@ export function ContactDetailPage() {
 
 function ChatCard({
   chat,
+  contact,
   onEdit,
   onDelete,
 }: {
   chat: CoffeeChat;
+  contact: ContactWithChats;
   onEdit: () => void;
   onDelete: () => void;
 }) {
   return (
     <div className="rounded-lg border bg-card p-5">
       <div className="flex items-start justify-between mb-2">
-        <div>
+        <div className="space-y-0.5">
           <p className="text-sm font-medium">{formatDateTime(chat.date_time)}</p>
-          {chat.meeting_link && (
+          <div className="flex items-center gap-3">
+            {chat.meeting_link && (
+              <a href={chat.meeting_link} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+                <Video size={12} /> Join meeting
+              </a>
+            )}
             <a
-              href={chat.meeting_link}
+              href={googleCalendarUrl({
+                title: `Coffee Chat — ${contact?.name ?? ""}${contact?.company ? ` (${contact.company})` : ""}`,
+                startIso: chat.date_time,
+                durationMinutes: 30,
+              })}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline mt-0.5"
+              className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
             >
-              <Video size={12} /> Join meeting
+              <CalendarPlus size={12} /> Add to Calendar
             </a>
-          )}
+          </div>
         </div>
         <div className="flex gap-1">
           <Button variant="ghost" size="icon" onClick={onEdit} title="Edit">

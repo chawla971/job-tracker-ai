@@ -34,6 +34,13 @@ export const api = {
       body: data !== undefined ? JSON.stringify(data) : undefined,
     }).then((r) => handleResponse<T>(r)),
 
+  put: <T>(path: string, data: unknown): Promise<T> =>
+    fetch(`${BASE}${path}`, {
+      method: "PUT",
+      headers: authHeaders(),
+      body: JSON.stringify(data),
+    }).then((r) => handleResponse<T>(r)),
+
   patch: <T>(path: string, data: unknown): Promise<T> =>
     fetch(`${BASE}${path}`, {
       method: "PATCH",

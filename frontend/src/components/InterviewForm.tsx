@@ -25,7 +25,8 @@ export function InterviewForm({ jobId, jobs, initial, onSubmit, onCancel }: Inte
 
   const [fields, setFields] = useState({
     round_type: initial?.round_type ?? "Phone Screen",
-    date_time: initial ? new Date(initial.date_time).toISOString().slice(0, 10) : defaultDate,
+    date: initial ? new Date(initial.date_time).toISOString().slice(0, 10) : defaultDate,
+    time: initial ? new Date(initial.date_time).toTimeString().slice(0, 5) : "09:00",
     interviewer_name: initial?.interviewer_name ?? "",
     prep_notes: initial?.prep_notes ?? "",
     post_interview_notes: initial?.post_interview_notes ?? "",
@@ -46,10 +47,11 @@ export function InterviewForm({ jobId, jobs, initial, onSubmit, onCancel }: Inte
     setError(null);
     setSubmitting(true);
     try {
+      const date_time = `${fields.date}T${fields.time}:00`;
       if (initial) {
         await onSubmit({
           round_type: fields.round_type,
-          date_time: fields.date_time + "T09:00:00",
+          date_time,
           interviewer_name: fields.interviewer_name || undefined,
           prep_notes: fields.prep_notes || undefined,
           post_interview_notes: fields.post_interview_notes || undefined,
@@ -58,7 +60,7 @@ export function InterviewForm({ jobId, jobs, initial, onSubmit, onCancel }: Inte
         await onSubmit({
           job_id: selectedJobId,
           round_type: fields.round_type,
-          date_time: fields.date_time + "T09:00:00",
+          date_time,
           interviewer_name: fields.interviewer_name || undefined,
           prep_notes: fields.prep_notes || undefined,
           post_interview_notes: fields.post_interview_notes || undefined,
@@ -110,12 +112,25 @@ export function InterviewForm({ jobId, jobs, initial, onSubmit, onCancel }: Inte
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="date_time">Date *</Label>
+          <Label htmlFor="date">Date *</Label>
           <input
-            id="date_time"
-            name="date_time"
+            id="date"
+            name="date"
             type="date"
-            value={fields.date_time}
+            value={fields.date}
+            onChange={handleChange}
+            required
+            className={SELECT_CLASS}
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="time">Time *</Label>
+          <input
+            id="time"
+            name="time"
+            type="time"
+            value={fields.time}
             onChange={handleChange}
             required
             className={SELECT_CLASS}

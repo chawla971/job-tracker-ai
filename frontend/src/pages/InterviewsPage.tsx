@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Calendar, Plus, X } from "lucide-react";
+import { Calendar, Plus, X, CalendarPlus } from "lucide-react";
+import { googleCalendarUrl } from "@/lib/calendar";
 import { Button } from "@/components/ui/button";
 import { InterviewForm } from "@/components/InterviewForm";
 import { interviewService } from "@/services/interviewService";
@@ -139,11 +140,27 @@ export function InterviewsPage() {
                     )}
                   </div>
 
-                  <div className="text-right shrink-0">
+                  <div className="text-right shrink-0 space-y-1.5">
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground justify-end">
                       <Calendar size={12} />
                       {formatDateTime(interview.date_time)}
                     </div>
+                    {isUpcoming && (
+                      <a
+                        href={googleCalendarUrl({
+                          title: `${job?.company_name ?? "Interview"} — ${interview.round_type}`,
+                          startIso: interview.date_time,
+                          details: job ? `${job.role_title}${interview.prep_notes ? `\n\nPrep notes:\n${interview.prep_notes}` : ""}` : "",
+                        })}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center gap-1 text-[11px] text-primary hover:underline"
+                      >
+                        <CalendarPlus size={11} />
+                        Add to Calendar
+                      </a>
+                    )}
                   </div>
                 </div>
 

@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertCircle, Calendar, Coffee, TrendingUp, Clock, Video, CheckCircle2 } from "lucide-react";
+import { AlertCircle, Calendar, Coffee, TrendingUp, Video, CheckCircle2, CalendarPlus } from "lucide-react";
+import { googleCalendarUrl } from "@/lib/calendar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { CalendarWidget, type CalendarEvent } from "@/components/CalendarWidget";
 import { dashboardService } from "@/services/dashboardService";
+import { api } from "@/lib/api";
 import type { DashboardData } from "@/types/dashboard";
 import type { JobStatus } from "@/types/job";
-import { daysUntil, daysSince, formatDate } from "@/lib/time";
+import { daysUntil, daysSince } from "@/lib/time";
 
 const STATUS_BAR_COLORS: Record<JobStatus, string> = {
   saved:        "#9ca3af",
@@ -25,19 +28,33 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
   );
 }
 
+interface RawCalEvent { date: string; type: string; label: string; }
+
 export function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
+  const [calEvents, setCalEvents] = useState<RawCalEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    dashboardService.get().then(setData).finally(() => setLoading(false));
+    Promise.all([
+      dashboardService.get().then(setData),
+      api.get<{ events: RawCalEvent[] }>("/api/calendar/events")
+        .then((r) => setCalEvents(r.events))
+        .catch(() => {}),
+    ]).finally(() => setLoading(false));
   }, []);
 
   if (loading) return (
     <div className="max-w-5xl mx-auto px-6 py-8 text-sm text-muted-foreground">Loading...</div>
   );
   if (!data) return null;
+
+  const calendarEvents: CalendarEvent[] = calEvents.map((e) => ({
+    date: e.date,
+    type: e.type as CalendarEvent["type"],
+    label: e.label,
+  }));
 
   const hasActionItems =
     data.upcoming_interviews.length > 0 ||
@@ -147,12 +164,26 @@ export function DashboardPage() {
                         <p className="text-sm font-medium">{c.contact_name}</p>
                         <p className="text-xs text-muted-foreground">{c.company ?? "No company"}</p>
                       </div>
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-2">
                         <span className="text-xs text-muted-foreground">
                           {days === 0 ? "Today" : days === 1 ? "Tomorrow" : `in ${days}d`}
                         </span>
+                        <a
+                          href={googleCalendarUrl({
+                            title: `Coffee Chat — ${c.contact_name}${c.company ? ` (${c.company})` : ""}`,
+                            startIso: c.date_time,
+                            durationMinutes: 30,
+                          })}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Add to Google Calendar"
+                        >
+                          <Button size="sm" variant="outline">
+                            <CalendarPlus size={12} className="mr-1.5" />Calendar
+                          </Button>
+                        </a>
                         {c.meeting_link && (
-                          <a href={c.meeting_link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+                          <a href={c.meeting_link} target="_blank" rel="noopener noreferrer">
                             <Button size="sm" variant="outline">
                               <Video size={12} className="mr-1.5" />Join
                             </Button>
@@ -212,29 +243,14 @@ export function DashboardPage() {
         </div>
       </section>
 
-      {/* ── Recent Activity ───────────────────────────────────── */}
-      {data.recent_activity.length > 0 && (
-        <section className="space-y-3">
-          <SectionHeader>Recent Activity</SectionHeader>
-          <div className="rounded-lg bg-secondary overflow-hidden">
-            <div className="px-4 py-2.5 flex items-center gap-2 text-sm font-medium border-b">
-              <Clock size={14} />
-              Last 5 Actions
-            </div>
-            {data.recent_activity.map((a, idx) => (
-              <div key={idx} className="px-4 py-3 flex items-center justify-between border-b last:border-b-0">
-                <div>
-                  <p className="text-sm">{a.label}</p>
-                  {a.sub_label && <p className="text-xs text-muted-foreground">{a.sub_label}</p>}
-                </div>
-                <span className="text-xs text-muted-foreground whitespace-nowrap ml-4">
-                  {formatDate(a.timestamp)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+
+      {/* ── Calendar ─────────────────────────────────────────── */}
+      <section className="space-y-3">
+        <h2 className="text-[11px] font-medium uppercase tracking-[0.05em] text-muted-foreground">
+          Calendar
+        </h2>
+        <CalendarWidget events={calendarEvents} />
+      </section>
     </div>
   );
 }
@@ -242,3 +258,5 @@ export function DashboardPage() {
 function ChevronLink() {
   return <span className="text-xs text-muted-foreground underline">View</span>;
 }
+
+// CalendarWidget and calendarEvents are used inside DashboardPage JSX — exported via CalendarWidget import above.

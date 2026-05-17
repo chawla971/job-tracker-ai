@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { BrowserRouter, Routes, Route, NavLink, Link } from "react-router-dom";
+import { BrowserRouter, Routes, Route, NavLink, Link, Navigate } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { AuthProvider } from "@/contexts/AuthContext";
 import {
@@ -13,9 +13,10 @@ import { ContactDetailPage } from "@/pages/ContactDetailPage";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { InterviewsPage } from "@/pages/InterviewsPage";
 import { ProfilePage } from "@/pages/ProfilePage";
+import { LandingPage } from "@/pages/LandingPage";
 import { ChatPage } from "@/pages/ChatPage";
-import { LoginPage } from "@/pages/LoginPage";
 import { AdminPage } from "@/pages/AdminPage";
+import { FeedbackButton } from "@/components/FeedbackButton";
 import { jobService } from "@/services/jobService";
 import { interviewService } from "@/services/interviewService";
 import { useTheme } from "@/lib/theme";
@@ -69,7 +70,7 @@ function SidebarContent({
         <NavLink to="/dashboard" className={navLinkClass} onClick={onClose}>
           <LayoutDashboard size={16} /><span>Dashboard</span>
         </NavLink>
-        <NavLink to="/" end className={navLinkClass} onClick={onClose}>
+        <NavLink to="/applications" className={navLinkClass} onClick={onClose}>
           <Briefcase size={16} /><span>Applications</span>
           <NavBadge count={jobCount} color="blue" />
         </NavLink>
@@ -192,6 +193,7 @@ function Layout({ children }: { children: React.ReactNode }) {
           </Link>
         </header>
         <main className="flex-1 overflow-y-auto">{children}</main>
+        <FeedbackButton />
       </div>
     </div>
   );
@@ -201,15 +203,21 @@ function AppRoutes() {
   const { isAuthenticated } = useAuth();
 
   if (!isAuthenticated) {
-    return <LoginPage />;
+    return (
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="*" element={<LandingPage />} />
+      </Routes>
+    );
   }
 
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={<JobsPage />} />
-        <Route path="/jobs/:id" element={<JobDetailPage />} />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/applications" element={<JobsPage />} />
+        <Route path="/jobs/:id" element={<JobDetailPage />} />
         <Route path="/contacts" element={<ContactsPage />} />
         <Route path="/contacts/:id" element={<ContactDetailPage />} />
         <Route path="/interviews" element={<InterviewsPage />} />

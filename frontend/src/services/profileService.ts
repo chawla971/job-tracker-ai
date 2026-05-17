@@ -3,7 +3,7 @@ import type { UserProfile, UserProfileUpdate } from "@/types/profile";
 
 export const profileService = {
   get: () => api.get<UserProfile>("/api/profile"),
-  update: (data: UserProfileUpdate) => api.post<UserProfile>("/api/profile", data),
+  update: (data: UserProfileUpdate) => api.put<UserProfile>("/api/profile", data),
   uploadResume: (file: File) => {
     const form = new FormData();
     form.append("file", file);

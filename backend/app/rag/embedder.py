@@ -1,26 +1,33 @@
 from typing import List
-from sentence_transformers import SentenceTransformer
 
-# Module-level singleton — model is loaded once when the module is first
-# imported, then reused for every subsequent call. Loading takes ~1s if
-# already downloaded; the Dockerfile pre-downloads it so no network needed.
-_model: SentenceTransformer | None = None
+# Uses OpenAI text-embedding-3-small (1536 dims) instead of a local model.
+# Benefits over sentence-transformers:
+#   - No 90MB model download, no torch dependency — much smaller Docker image
+#   - Better embedding quality for English job-search text
+#   - No cold-start memory spike (was OOMing on Railway's free tier)
+# Cost: ~$0.02 per 1M tokens — negligible for a personal job tracker.
+
+_client = None
 
 
-def get_model() -> SentenceTransformer:
-    global _model
-    if _model is None:
-        _model = SentenceTransformer("all-MiniLM-L6-v2")
-    return _model
+def _get_client():
+    global _client
+    if _client is None:
+        from openai import OpenAI
+        from app.config import settings
+        _client = OpenAI(api_key=settings.openai_api_key)
+    return _client
+
+
+EMBEDDING_MODEL = "text-embedding-3-small"
+EMBEDDING_DIM = 1536
 
 
 def embed_texts(texts: List[str]) -> List[List[float]]:
-    """
-    Embed a list of text strings. Returns a list of 384-dim float vectors.
-    Batches automatically handled by sentence-transformers.
-    """
     if not texts:
         return []
-    model = get_model()
-    vectors = model.encode(texts, convert_to_numpy=True)
-    return vectors.tolist()
+    client = _get_client()
+    # OpenAI handles batching internally; max 2048 inputs per request
+    response = client.embeddings.create(model=EMBEDDING_MODEL, input=texts)
+    # Results are returned in the same order as input
+    return [item.embedding for item in sorted(response.data, key=lambda x: x.index)]

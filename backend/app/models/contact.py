@@ -25,6 +25,7 @@ class Contact(Base):
     name = Column(String, nullable=False)
     linkedin_url = Column(String, nullable=True)
     company = Column(String, nullable=True)
+    meeting_link = Column(String, nullable=True)
     outreach_date = Column(Date, nullable=False)
     status = Column(Enum(ContactStatus), nullable=False, default=ContactStatus.awaiting_response)
     follow_up_date = Column(Date, nullable=True)

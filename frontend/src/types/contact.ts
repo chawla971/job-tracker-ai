@@ -20,6 +20,7 @@ export interface Contact {
   name: string;
   linkedin_url: string | null;
   company: string | null;
+  meeting_link: string | null;
   outreach_date: string;
   status: ContactStatus;
   follow_up_date: string | null;
@@ -37,6 +38,7 @@ export interface ContactCreate {
   job_id?: string;
   linkedin_url?: string;
   company?: string;
+  meeting_link?: string;
   outreach_date: string;
   status: ContactStatus;
   follow_up_date?: string;
@@ -47,6 +49,7 @@ export interface ContactUpdate {
   job_id?: string | null;
   linkedin_url?: string;
   company?: string;
+  meeting_link?: string;
   outreach_date?: string;
   status?: ContactStatus;
   follow_up_date?: string;

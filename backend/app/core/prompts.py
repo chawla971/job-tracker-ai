@@ -25,7 +25,7 @@ JD_FULL_EXTRACTION_PROMPT = """Extract from this job posting. Return valid JSON 
 {{"company_name": "...", "role_title": "...", "location": "...", "jd_text": "..."}}
 
 Rules:
-- jd_text: full job description as clean readable text (responsibilities, requirements, etc.)
+- jd_text: full job description as PLAIN TEXT ONLY — no HTML tags, no CSS classes, no angle brackets. Include responsibilities, requirements, about the company, etc.
 - location: city/province, "Remote", or "Hybrid" — not a street address
 - Set any field you cannot determine to null
 
