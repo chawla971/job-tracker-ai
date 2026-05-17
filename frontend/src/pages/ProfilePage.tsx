@@ -15,7 +15,7 @@ function ResumeDisplay({ text }: { text: string }) {
   );
 }
 
-function SaveStatus({ status }: { status: "idle" | "saving" | "saved" | "error"; message?: string }) {
+function SaveStatus({ status, message }: { status: "idle" | "saving" | "saved" | "error"; message?: string }) {
   if (status === "saving") return (
     <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
       <Loader2 size={13} className="animate-spin" />Saving...
