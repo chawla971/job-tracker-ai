@@ -91,6 +91,11 @@ def google_login(data: GoogleTokenRequest, db: Session = Depends(get_db)) -> Aut
     if is_new_user:
         _claim_orphaned_data(db, user.id)
 
+    # Promote existing users who should be admin but were created before this check existed
+    if not user.is_admin and user.email in ADMIN_EMAILS:
+        user.is_admin = True
+        db.commit()
+
     token = create_jwt(str(user.id), user.email)
     return AuthResponse(
         token=token,
