@@ -1,7 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
-from sqlalchemy.orm import Session
+import logging
 from typing import List
 from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from sqlalchemy.orm import Session
 
 from app.database import get_db, SessionLocal
 from app.schemas.job import JobCreate, JobUpdate, JobResponse, JobDetailResponse, JDParseRequest, JDParseResponse
@@ -11,21 +13,24 @@ from app.core.dependencies import get_current_user
 from app.core.llm_errors import raise_for_llm_error
 from app.core.prompts import EXTRACTION_SYSTEM, JD_FIELD_EXTRACTION_PROMPT
 
+log = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def _embed_job_background(job_id: str, jd_text: str, user_id: str) -> None:
-    import logging
-    import uuid as _uuid
-    from app.models.embedding import SourceType
-    from app.rag.pipeline import embed_and_store
-    db = SessionLocal()
+def _embed_jd_inline(db: Session, job_id: UUID, jd_text: str, user_id: UUID) -> None:
+    """
+    Embed the JD text synchronously in the same DB session.
+    Called inline (not as a background task) so it cannot be lost to a server crash.
+    Errors are caught and logged — a failed embed never blocks the job save.
+    """
     try:
-        embed_and_store(db, SourceType.job_jd, _uuid.UUID(job_id), jd_text, user_id=_uuid.UUID(user_id))
+        from app.models.embedding import SourceType
+        from app.rag.pipeline import embed_and_store
+        log.info("[embed] Embedding JD for job %s (%d chars)", job_id, len(jd_text))
+        embed_and_store(db, SourceType.job_jd, job_id, jd_text, user_id=user_id)
+        log.info("[embed] JD embedded successfully for job %s", job_id)
     except Exception:
-        logging.getLogger(__name__).exception("[embed] Failed to embed job %s", job_id)
-    finally:
-        db.close()
+        log.exception("[embed] Failed to embed JD for job %s", job_id)
 
 
 @router.post("/parse-jd", response_model=JDParseResponse)
@@ -37,9 +42,16 @@ async def parse_jd(data: JDParseRequest, current_user: User = Depends(get_curren
         raise HTTPException(status_code=400, detail="Job description text is too short to extract from.")
     try:
         llm = get_llm_provider()
-        raw = await llm.complete(system=EXTRACTION_SYSTEM, messages=[Message(role="user", content=JD_FIELD_EXTRACTION_PROMPT.format(text=data.text[:4000]))])
+        raw = await llm.complete(
+            system=EXTRACTION_SYSTEM,
+            messages=[Message(role="user", content=JD_FIELD_EXTRACTION_PROMPT.format(text=data.text[:4000]))],
+        )
         parsed = json.loads(raw.strip())
-        return JDParseResponse(company=str(parsed.get("company", "")), title=str(parsed.get("title", "")), location=str(parsed.get("location", "")))
+        return JDParseResponse(
+            company=str(parsed.get("company", "")),
+            title=str(parsed.get("title", "")),
+            location=str(parsed.get("location", "")),
+        )
     except json.JSONDecodeError:
         raise HTTPException(status_code=500, detail="LLM returned unexpected format. Try again.")
     except ValueError as e:
@@ -54,10 +66,14 @@ def list_jobs(db: Session = Depends(get_db), current_user: User = Depends(get_cu
 
 
 @router.post("/", response_model=JobResponse, status_code=201)
-def create_job(job_data: JobCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def create_job(
+    job_data: JobCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     job = job_service.create_job(db, job_data, current_user.id)
     if job.jd_text:
-        background_tasks.add_task(_embed_job_background, str(job.id), job.jd_text, str(current_user.id))
+        _embed_jd_inline(db, job.id, job.jd_text, current_user.id)
     return job
 
 
@@ -78,12 +94,17 @@ def get_job(job_id: UUID, db: Session = Depends(get_db), current_user: User = De
 
 
 @router.patch("/{job_id}", response_model=JobResponse)
-def update_job(job_id: UUID, job_data: JobUpdate, background_tasks: BackgroundTasks, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def update_job(
+    job_id: UUID,
+    job_data: JobUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     job = job_service.update_job(db, job_id, job_data, current_user.id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    if "jd_text" in job_data.model_fields_set and job.jd_text:
-        background_tasks.add_task(_embed_job_background, str(job.id), job.jd_text, str(current_user.id))
+    if job.jd_text:
+        _embed_jd_inline(db, job.id, job.jd_text, current_user.id)
     return job
 
 

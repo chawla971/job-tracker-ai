@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
@@ -24,22 +24,31 @@ class FeedbackResponse(BaseModel):
     type: FeedbackType
     description: str
     status: FeedbackStatus
+    admin_notes: Optional[str] = None
     created_at: datetime
-    user_email: str | None = None
+    user_email: Optional[str] = None
+
+
+class NotesUpdate(BaseModel):
+    admin_notes: str
+
+
+def _to_response(fb: Feedback, email: Optional[str] = None) -> FeedbackResponse:
+    return FeedbackResponse(
+        id=str(fb.id), type=fb.type, description=fb.description,
+        status=fb.status, admin_notes=fb.admin_notes,
+        created_at=fb.created_at, user_email=email,
+    )
 
 
 @router.post("", response_model=FeedbackResponse, status_code=201)
 @router.post("/", response_model=FeedbackResponse, status_code=201)
-def submit_feedback(
-    data: FeedbackCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> FeedbackResponse:
+def submit_feedback(data: FeedbackCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)) -> FeedbackResponse:
     fb = Feedback(user_id=current_user.id, type=data.type, description=data.description)
     db.add(fb)
     db.commit()
     db.refresh(fb)
-    return FeedbackResponse(id=str(fb.id), type=fb.type, description=fb.description, status=fb.status, created_at=fb.created_at)
+    return _to_response(fb)
 
 
 @router.get("/admin", response_model=List[FeedbackResponse])
@@ -50,21 +59,22 @@ def list_feedback(db: Session = Depends(get_db), _: User = Depends(require_admin
         .order_by(Feedback.created_at.desc())
         .all()
     )
-    return [
-        FeedbackResponse(id=str(fb.id), type=fb.type, description=fb.description, status=fb.status, created_at=fb.created_at, user_email=email)
-        for fb, email in rows
-    ]
+    return [_to_response(fb, email) for fb, email in rows]
 
 
 @router.patch("/{feedback_id}/status")
-def update_status(
-    feedback_id: UUID,
-    status: FeedbackStatus,
-    db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
-):
+def update_status(feedback_id: UUID, status: FeedbackStatus, db: Session = Depends(get_db), _: User = Depends(require_admin)):
     fb = db.query(Feedback).filter(Feedback.id == feedback_id).first()
     if fb:
         fb.status = status
+        db.commit()
+    return {"ok": True}
+
+
+@router.patch("/{feedback_id}/notes")
+def update_notes(feedback_id: UUID, data: NotesUpdate, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+    fb = db.query(Feedback).filter(Feedback.id == feedback_id).first()
+    if fb:
+        fb.admin_notes = data.admin_notes
         db.commit()
     return {"ok": True}

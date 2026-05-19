@@ -52,9 +52,9 @@ export function JobForm({ initial, onSubmit, onCancel }: JobFormProps) {
       const extracted = await jobService.parseJD(pasted);
       setFields((prev) => ({
         ...prev,
-        company_name: prev.company_name || extracted.company,
-        role_title: prev.role_title || extracted.title,
-        location_remote_status: prev.location_remote_status || extracted.location,
+        company_name: extracted.company || prev.company_name,
+        role_title: extracted.title || prev.role_title,
+        location_remote_status: extracted.location || prev.location_remote_status,
         // Only set applied + today's date if still at the default "saved" state
         ...(prev.status === "saved" && extracted.company
           ? {
@@ -82,10 +82,11 @@ export function JobForm({ initial, onSubmit, onCancel }: JobFormProps) {
       }
       setFields((prev) => ({
         ...prev,
-        company_name: prev.company_name || result.company_name || prev.company_name,
-        role_title: prev.role_title || result.role_title || prev.role_title,
-        location_remote_status: prev.location_remote_status || result.location || prev.location_remote_status,
-        jd_text: prev.jd_text || result.jd_text || prev.jd_text,
+        // Always overwrite with fetched value if non-null (re-fetch replaces stale data)
+        company_name: result.company_name ?? prev.company_name,
+        role_title: result.role_title ?? prev.role_title,
+        location_remote_status: result.location ?? prev.location_remote_status,
+        jd_text: result.jd_text ?? prev.jd_text,
         ...(prev.status === "saved" && result.company_name
           ? { status: "applied" as JobStatus, date_applied: new Date().toISOString().slice(0, 10) }
           : {}),

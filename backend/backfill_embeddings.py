@@ -1,11 +1,14 @@
 """
-One-time backfill: embed all existing data that was saved before the embedding
-pipeline was connected. Safe to run multiple times — embed_and_store deletes
-existing embeddings before re-inserting, so it won't create duplicates.
-
+Backfill embeddings for all existing data.
 Run inside the backend container:
-    docker-compose exec backend python backfill_embeddings.py
+    docker exec job-tracker-ai-backend-1 python backfill_embeddings.py
+
+Prints progress for each item so you can see exactly what's working/failing.
 """
+import logging
+logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+log = logging.getLogger(__name__)
+
 from app.database import SessionLocal
 from app.models.job import Job
 from app.models.coffee_chat import CoffeeChat
@@ -17,45 +20,102 @@ from app.rag.pipeline import embed_and_store
 
 def backfill():
     db = SessionLocal()
+    ok = fail = skip = 0
+
     try:
+        # ── Jobs ──────────────────────────────────────────────────────────────
         jobs = db.query(Job).all()
-        print(f"Jobs: {len(jobs)}")
-        for job in jobs:
-            if job.jd_text and job.jd_text.strip():
-                print(f"  Embedding JD: {job.company_name} — {job.role_title}")
-                embed_and_store(db, SourceType.job_jd, job.id, job.jd_text)
+        log.info("Found %d jobs", len(jobs))
+        for j in jobs:
+            if not j.jd_text or not j.jd_text.strip():
+                skip += 1
+                continue
+            try:
+                log.info("  Embedding JD: %s — %s (%d chars)", j.company_name, j.role_title, len(j.jd_text))
+                embed_and_store(db, SourceType.job_jd, j.id, j.jd_text, user_id=j.user_id)
+                log.info("  ✓ Done")
+                ok += 1
+            except Exception as e:
+                log.error("  ✗ FAILED: %s", e)
+                fail += 1
 
+        # ── Coffee chats ──────────────────────────────────────────────────────
         chats = db.query(CoffeeChat).all()
-        print(f"Coffee chats: {len(chats)}")
-        for chat in chats:
-            if chat.notes and chat.notes.strip():
-                print(f"  Embedding chat notes: {chat.id}")
-                embed_and_store(db, SourceType.coffee_chat_notes, chat.id, chat.notes)
+        log.info("Found %d coffee chats", len(chats))
+        for c in chats:
+            if not c.notes or not c.notes.strip():
+                skip += 1
+                continue
+            try:
+                log.info("  Embedding chat notes: %s", c.id)
+                embed_and_store(db, SourceType.coffee_chat_notes, c.id, c.notes, user_id=c.user_id)
+                log.info("  ✓ Done")
+                ok += 1
+            except Exception as e:
+                log.error("  ✗ FAILED: %s", e)
+                fail += 1
 
+        # ── Interviews ────────────────────────────────────────────────────────
         interviews = db.query(Interview).all()
-        print(f"Interviews: {len(interviews)}")
+        log.info("Found %d interviews", len(interviews))
         for iv in interviews:
             if iv.prep_notes and iv.prep_notes.strip():
-                print(f"  Embedding prep notes: {iv.id}")
-                embed_and_store(db, SourceType.interview_prep, iv.id, iv.prep_notes)
-            if iv.post_interview_notes and iv.post_interview_notes.strip():
-                print(f"  Embedding post-interview notes: {iv.id}")
-                embed_and_store(db, SourceType.interview_post, iv.id, iv.post_interview_notes)
+                try:
+                    log.info("  Embedding prep notes: %s", iv.id)
+                    embed_and_store(db, SourceType.interview_prep, iv.id, iv.prep_notes, user_id=iv.user_id)
+                    log.info("  ✓ Done")
+                    ok += 1
+                except Exception as e:
+                    log.error("  ✗ FAILED: %s", e)
+                    fail += 1
+            else:
+                skip += 1
 
+            if iv.post_interview_notes and iv.post_interview_notes.strip():
+                try:
+                    log.info("  Embedding post-interview notes: %s", iv.id)
+                    embed_and_store(db, SourceType.interview_post, iv.id, iv.post_interview_notes, user_id=iv.user_id)
+                    log.info("  ✓ Done")
+                    ok += 1
+                except Exception as e:
+                    log.error("  ✗ FAILED: %s", e)
+                    fail += 1
+            else:
+                skip += 1
+
+        # ── Profiles ──────────────────────────────────────────────────────────
         profiles = db.query(UserProfile).all()
-        print(f"Profiles: {len(profiles)}")
+        log.info("Found %d profiles", len(profiles))
         for p in profiles:
             if p.resume_text and p.resume_text.strip():
-                print(f"  Embedding resume")
-                embed_and_store(db, SourceType.user_resume, p.id, p.resume_text)
-            if p.about_me and p.about_me.strip():
-                print(f"  Embedding about me")
-                embed_and_store(db, SourceType.user_about, p.id, p.about_me)
+                try:
+                    log.info("  Embedding resume for profile %s", p.id)
+                    embed_and_store(db, SourceType.user_resume, p.id, p.resume_text, user_id=p.user_id)
+                    log.info("  ✓ Done")
+                    ok += 1
+                except Exception as e:
+                    log.error("  ✗ FAILED: %s", e)
+                    fail += 1
+            else:
+                skip += 1
 
-        print("\nBackfill complete.")
+            if p.about_me and p.about_me.strip():
+                try:
+                    log.info("  Embedding about_me for profile %s", p.id)
+                    embed_and_store(db, SourceType.user_about, p.id, p.about_me, user_id=p.user_id)
+                    log.info("  ✓ Done")
+                    ok += 1
+                except Exception as e:
+                    log.error("  ✗ FAILED: %s", e)
+                    fail += 1
+            else:
+                skip += 1
 
     finally:
         db.close()
+
+    log.info("─" * 40)
+    log.info("Backfill complete: %d OK, %d failed, %d skipped (no text)", ok, fail, skip)
 
 
 if __name__ == "__main__":

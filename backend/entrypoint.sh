@@ -7,10 +7,7 @@ alembic upgrade head
 echo "Starting API server..."
 PORT=${PORT:-8000}
 
-if [ "${RAILWAY_ENVIRONMENT}" = "production" ]; then
-    # Production: no file watcher, use Railway-provided PORT
-    exec uvicorn app.main:app --host 0.0.0.0 --port "$PORT"
-else
-    # Local dev: hot reload, watch only app/ to avoid inotify exhaustion
-    exec uvicorn app.main:app --host 0.0.0.0 --port "$PORT" --reload --reload-dir /app/app
-fi
+# No --reload anywhere — inotify watcher exhaustion was crashing the server
+# and killing background embedding tasks before they could complete.
+# Restart the backend manually after code changes: docker-compose restart backend
+exec uvicorn app.main:app --host 0.0.0.0 --port "$PORT"

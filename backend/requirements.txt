@@ -12,7 +12,7 @@ pypdf==4.2.0
 python-docx==1.1.2
 python-multipart==0.0.9
 openai>=1.52.0
-anthropic==0.28.0
+# anthropic removed — using openai only (add back if switching LLM_PROVIDER=anthropic)
 requests>=2.31.0
 openpyxl>=3.1.0
 beautifulsoup4>=4.12.0

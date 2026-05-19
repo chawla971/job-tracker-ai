@@ -4,7 +4,7 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import { AuthProvider } from "@/contexts/AuthContext";
 import {
   Briefcase, LayoutDashboard, Users, Calendar, Sparkles,
-  User, Moon, Sun, Menu, X, LogOut, ShieldCheck,
+  User, Moon, Sun, Menu, X, LogOut, ShieldCheck, Linkedin, Mail,
 } from "lucide-react";
 import { JobsPage } from "@/pages/JobsPage";
 import { JobDetailPage } from "@/pages/JobDetailPage";
@@ -125,6 +125,29 @@ function SidebarContent({
             </button>
           </div>
         )}
+
+        {/* Builder signature */}
+        <div className="px-3 pt-2 pb-1 border-t border-[hsl(var(--sidebar-border))] mt-1">
+          <p className="text-[11px] text-muted-foreground/60 mb-1.5">Built by Sahil Chawla</p>
+          <div className="flex items-center gap-1.5">
+            <a
+              href="https://www.linkedin.com/in/sahil-chawla-971sai/"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Connect on LinkedIn"
+              className="p-1 rounded text-muted-foreground hover:text-[#0A66C2] transition-colors"
+            >
+              <Linkedin size={15} />
+            </a>
+            <a
+              href="mailto:sahil971chawla@gmail.com"
+              title="Send me feedback"
+              className="p-1 rounded text-muted-foreground hover:text-primary transition-colors"
+            >
+              <Mail size={15} />
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   );

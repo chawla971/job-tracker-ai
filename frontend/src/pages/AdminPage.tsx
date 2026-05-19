@@ -1,25 +1,90 @@
 import { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { X, Save } from "lucide-react";
 import { adminService, type AdminStats, type AdminUser } from "@/services/adminService";
 import { feedbackService, type FeedbackItem, type FeedbackStatus } from "@/services/feedbackService";
 import { formatDate } from "@/lib/time";
 
 type Tab = "overview" | "feedback";
 
-function FeedbackModal({ item, onClose }: { item: FeedbackItem; onClose: () => void }) {
+const TYPE_COLORS: Record<string, string> = {
+  bug:     "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
+  feature: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+  other:   "bg-gray-100 text-gray-600 dark:bg-gray-700/40 dark:text-gray-300",
+};
+
+function FeedbackModal({ item, onClose, onNotesUpdate }: {
+  item: FeedbackItem;
+  onClose: () => void;
+  onNotesUpdate: (id: string, notes: string) => void;
+}) {
+  const [notes, setNotes] = useState(item.admin_notes ?? "");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  async function handleSaveNotes() {
+    setSaving(true);
+    try {
+      await feedbackService.updateNotes(item.id, notes);
+      onNotesUpdate(item.id, notes);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-      <div className="bg-card rounded-xl border shadow-lg w-full max-w-lg space-y-4 p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium capitalize">{item.type}</span>
-            <span className="text-xs text-muted-foreground">· {formatDate(item.created_at)} · {item.user_email ?? "unknown"}</span>
+      <div className="bg-card rounded-xl border shadow-lg w-full max-w-lg">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b">
+          <div className="flex items-center gap-2.5">
+            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full capitalize ${TYPE_COLORS[item.type]}`}>
+              {item.type}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {item.user_email ?? "unknown"} · {formatDate(item.created_at)}
+            </span>
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
             <X size={16} />
           </button>
         </div>
-        <p className="text-sm leading-relaxed whitespace-pre-wrap">{item.description}</p>
+
+        <div className="p-5 space-y-4">
+          {/* User description */}
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground mb-1.5">Description</p>
+            <div className="rounded-lg bg-muted/30 border p-3 text-sm leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto">
+              {item.description}
+            </div>
+          </div>
+
+          {/* Admin notes */}
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground mb-1.5">
+              Your Notes (private)
+            </p>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Add internal notes, next steps, priority..."
+              className="w-full rounded-lg border bg-background text-foreground text-sm px-3 py-2 min-h-[80px] resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+          </div>
+
+          <div className="flex items-center gap-3 justify-end">
+            {saved && <span className="text-xs text-green-600 dark:text-green-400">Saved</span>}
+            <button
+              onClick={handleSaveNotes}
+              disabled={saving}
+              className="flex items-center gap-1.5 text-sm bg-primary text-primary-foreground rounded-md px-3 py-1.5 hover:opacity-90 transition-opacity disabled:opacity-50"
+            >
+              <Save size={13} />
+              {saving ? "Saving..." : "Save notes"}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -69,6 +134,10 @@ export function AdminPage() {
   async function handleStatusChange(id: string, status: FeedbackStatus) {
     await feedbackService.updateStatus(id, status);
     setFeedback((prev) => prev.map((f) => f.id === id ? { ...f, status } : f));
+  }
+
+  function handleNotesUpdate(id: string, admin_notes: string) {
+    setFeedback((prev) => prev.map((f) => f.id === id ? { ...f, admin_notes } : f));
   }
 
   function handleSort(key: SortKey) {
@@ -199,7 +268,11 @@ export function AdminPage() {
       </>)}
 
       {selectedFeedback && (
-        <FeedbackModal item={selectedFeedback} onClose={() => setSelectedFeedback(null)} />
+        <FeedbackModal
+          item={selectedFeedback}
+          onClose={() => setSelectedFeedback(null)}
+          onNotesUpdate={handleNotesUpdate}
+        />
       )}
     </div>
   );

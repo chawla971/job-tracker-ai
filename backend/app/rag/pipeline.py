@@ -1,10 +1,22 @@
+import logging
 from typing import Optional
 from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.models.embedding import Embedding, SourceType
-from app.rag.chunker import chunk_text
 from app.rag.embedder import embed_texts
+
+log = logging.getLogger(__name__)
+
+_CHUNK_SIZE = 1500  # chars; ~375 tokens — well under OpenAI's 8192 token limit
+
+
+def _split(text: str) -> list:
+    """Fixed-size splitting. Replaces chunk_text to avoid import issues."""
+    text = text.strip()
+    if not text:
+        return []
+    return [text[i: i + _CHUNK_SIZE] for i in range(0, len(text), _CHUNK_SIZE)]
 
 
 def embed_and_store(
@@ -14,47 +26,37 @@ def embed_and_store(
     text: Optional[str],
     user_id: Optional[UUID] = None,
 ) -> None:
-    """
-    Core pipeline function called by every service that saves embeddable text.
-
-    Steps:
-    1. Delete any existing embeddings for this source (handles edits cleanly)
-    2. If text is empty/None, stop here — nothing to embed
-    3. Chunk the text
-    4. Generate embeddings for all chunks in one batch
-    5. Insert embedding rows
-
-    Called synchronously — adds ~100-300ms per save depending on text length.
-    Fine for a single-user app; would move to a background queue for multi-user.
-    """
-    # Step 1: always clear stale embeddings first
     _delete_embeddings(db, source_type, source_id)
+    db.commit()
 
     if not text or not text.strip():
-        db.commit()
         return
 
-    # Step 2: chunk
-    chunks = chunk_text(text)
+    chunks = _split(text)
     if not chunks:
-        db.commit()
         return
 
-    # Step 3: embed all chunks in a single batch call
-    vectors = embed_texts(chunks)
+    log.info("[pipeline] %s %s → %d chunks", source_type, source_id, len(chunks))
 
-    # Step 4: insert rows
-    for i, (chunk, vector) in enumerate(zip(chunks, vectors)):
-        db.add(Embedding(
-            source_type=source_type,
-            source_id=source_id,
-            chunk_index=i,
-            chunk_text=chunk,
-            embedding=vector,
-            user_id=user_id,
-        ))
-
-    db.commit()
+    for i, chunk in enumerate(chunks):
+        try:
+            vectors = embed_texts([chunk])
+            if not vectors:
+                log.warning("[pipeline] empty vector for chunk %d", i)
+                continue
+            db.add(Embedding(
+                source_type=source_type,
+                source_id=source_id,
+                chunk_index=i,
+                chunk_text=chunk,
+                embedding=vectors[0],
+                user_id=user_id,
+            ))
+            db.commit()
+            log.info("[pipeline] chunk %d/%d stored (dim=%d)", i + 1, len(chunks), len(vectors[0]))
+        except Exception:
+            log.exception("[pipeline] failed on chunk %d", i)
+            db.rollback()
 
 
 def _delete_embeddings(db: Session, source_type: SourceType, source_id: UUID) -> None:

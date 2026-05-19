@@ -28,4 +28,5 @@ class Feedback(Base):
     type = Column(Enum(FeedbackType), nullable=False)
     description = Column(Text, nullable=False)
     status = Column(Enum(FeedbackStatus), nullable=False, default=FeedbackStatus.open)
+    admin_notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
